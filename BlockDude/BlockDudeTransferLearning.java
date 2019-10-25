@@ -99,7 +99,7 @@ public class BlockDudeTransferLearning implements TransferLearning{
 	 * @param outputPath
 	 * @param algorithmChoice
 	 */
-	public TLLinearVFA PerformLearningAlgorithm(String outputPath, int algorithmChoice, int nEpochs, int nEpisodes, TLLinearVFA...sourceVFAs){
+	public TLLinearVFA PerformLearningAlgorithm(String outputPath, int nEpochs, int nEpisodes, TLLinearVFA...sourceVFAs){
 		
 		File outputFile = new File(outputPath);
 		outputFile.mkdirs();
@@ -138,46 +138,36 @@ public class BlockDudeTransferLearning implements TransferLearning{
 			GradientDescentSarsaLam agent = null;
 			String writeString = "";
 			
-			if(algorithmChoice == 2){
-//				System.out.println("You have chosen Sarsa(lambda) for Transfer Learning");
+			TLTileCodingFeatures tileCoding = BlockDudeTransferLearning_UTILS.CreateTransferLearningTCFeatures(initialState, nTilings);
+			vfa = new TLLinearVFA(tileCoding);
+			
+			//All the Transfer happens here
+			if(sourceVFAs != null){
+				//These two lines fix the problem with the input sourceVFAs when passed as a variable X = null
+				if(sourceVFAs.length == 1 && sourceVFAs[0] == null)
+					sourceVFAs = null;
+				else{
+				lambda = 0.9;
 				
-				TLTileCodingFeatures tileCoding = BlockDudeTransferLearning_UTILS.CreateTransferLearningTCFeatures(initialState, nTilings);
-				vfa = new TLLinearVFA(tileCoding);
+				for(TLLinearVFA sVFA : sourceVFAs)//loops over all the sources for transferring knowledge in parallel
+					sVFA.transferVFA(vfa, null);
 				
-				//All the Transfer happens here
-				if(sourceVFAs != null){
-					//These two lines fix the problem with the input sourceVFAs when passed as a variable X = null
-					if(sourceVFAs.length == 1 && sourceVFAs[0] == null)
-						sourceVFAs = null;
-					else{
-					lambda = 0.9;
-					
-					for(TLLinearVFA sVFA : sourceVFAs)//loops over all the sources for transferring knowledge in parallel
-						sVFA.transferVFA(vfa, null);
-					
-					//stateToPrint = BlockDudeTransferLearning_UTILS.initialState_2_hard_firstStep;
-					}
+				//stateToPrint = BlockDudeTransferLearning_UTILS.initialState_2_hard_firstStep;
 				}
-				
-				alphaTilingWise = alpha/((TLTileCodingFeatures)vfa.sparseStateFeatures).numTIlings();
-				
-				agent = new GradientDescentSarsaLam(domain, gamma, vfa, alphaTilingWise, lambda);
-				
-				//to comment in case of checking the optimal target policy trajectory
+			}
+			
+			alphaTilingWise = alpha/((TLTileCodingFeatures)vfa.sparseStateFeatures).numTIlings();
+			
+			agent = new GradientDescentSarsaLam(domain, gamma, vfa, alphaTilingWise, lambda);
+			
+			//to comment in case of checking the optimal target policy trajectory
 //				if(sourceVFAs != null){
 //					BlockDudeTransferLearning_UTILS.PerformLearntPolicy(agent, env, outputPath, "transferredPolicy", -1);
 //					agent.setLearningRate( new ConstantLR(alphaTilingWise));
 //				}	
-				
-				writeString = "TL_";
-			}else{
-				System.out.println("Your algorithm choice (" + writeString + ") is not available. "
-						+ "Please select one of the followings:"
-						+ "\n - 0 for Q-Learning"
-						+ "\n - 1 for Sarsa(lambda)");
-				return null;
-			}
 			
+			writeString = "TL_";
+						
 			QProvider qp = (QProvider)agent;
 			
 			double epsilon = 0.1;//starting epsilon value from which we start lowering it
@@ -365,7 +355,7 @@ public class BlockDudeTransferLearning implements TransferLearning{
 		/** TARGET TASK WITHOUT TRANSFER*/	
 		BlockDudeTransferLearning targetNoTransfer = new BlockDudeTransferLearning(BlockDudeTransferLearning_UTILS.initialState_pit, 8);
 		//learning algorithms here
-     	TLLinearVFA notImportantVFA = targetNoTransfer.PerformLearningAlgorithm(outputPathNoTransferTarget, 2, nEpochsT, nEpisodesT, null);
+     	TLLinearVFA notImportantVFA = targetNoTransfer.PerformLearningAlgorithm(outputPathNoTransferTarget, nEpochsT, nEpisodesT, null);
 		//run the visualiser
 		targetNoTransfer.visualize(outputPathNoTransferTarget);
 		/** END */
